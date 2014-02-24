@@ -71,7 +71,7 @@ modelParams['g'] = 9.8
 # steps that a tracked updraft must be to be output to the final data
 # file.
 #
-# velFudge is the fudge-factor for the advective process in ranking
+# velCorrect is the correction factor for the advective process in ranking
 # potential temporal linking.  This was included since it is
 # well-known that thunderstorms can often move at fractions of the
 # imposed advective velocities.
@@ -102,14 +102,14 @@ TrackerParams['SPACETHRES']      = 2
 TrackerParams['RANKTHRES']       = 5.0
 TrackerParams['POINTTHRES']      = 6
 TrackerParams['OUTPUTTIMETHRES'] = 3
-TrackerParams['velFudge']        = 1.0
+TrackerParams['velCorrect']        = 1.0
 
 tempar = np.array(range(TrackerParams['NUMLEVELS']))
 tempar = tempar + TrackerParams['MINUPLEVEL']
 TrackerParams['checkLevels'] = tempar
 
 tempar = np.array(range(TrackerParams['NUMLEVELS']), float)
-tempar = 0.2 * tempar + 0.6
+tempar = 1.5
 TrackerParams['checkValues'] = tempar
 
 updraftData = []

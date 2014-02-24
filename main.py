@@ -139,9 +139,9 @@ for currFile in fileList:
                     gridCorrX = GV.modelParams['DT'] * 3600.0 / GV.modelParams['DX']
                     gridCorrY = GV.modelParams['DT'] * 3600.0 / GV.modelParams['DY']
                     for temp2D in up3Dprior.linked2DUpdrafts:
-                        totalXadv = (temp2D.xPos + GV.TrackerParams['velFudge'] * avgUadv * gridCorrX) + \
+                        totalXadv = (temp2D.xPos + GV.TrackerParams['velCorrect'] * avgUadv * gridCorrX) + \
                                     totalXadv
-                        totalYadv = (temp2D.yPos + GV.TrackerParams['velFudge'] * avgVadv * gridCorrY) + \
+                        totalYadv = (temp2D.yPos + GV.TrackerParams['velCorrect'] * avgVadv * gridCorrY) + \
                                     totalYadv
                         tempCount = tempCount + 1
                     advectedX = totalXadv / tempCount
