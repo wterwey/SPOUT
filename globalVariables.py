@@ -20,7 +20,7 @@ modelParams['Y0']  = -1.0 * (modelParams['NY'] - 1) * modelParams['DY'] / 2.0
 modelParams['T0']  = 0.0
 
 modelParams['ZARR'] = []
-modelParams['FILEROOT'] = './AnalysisFiles/ascii'
+modelParams['FILEROOT'] = '/home/wterwey/Desktop/SPOUT/WRFFiles/OriginalWRF'
 modelParams['g'] = 9.8
 
 #----------------------------------------------------------------------

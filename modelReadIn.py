@@ -1,9 +1,157 @@
+import netCDF4
 import math
 import numpy as np
 import globalVariables as GV
 global modelParams, TrackerParams, modelData
 
-def modelData_ReadInFromFile(filename):
+#==================================
+# Basic interpolation function
+#==================================
+def interp2hgt(zlo, zhi, varlo, varhi, zcur):
+    return (varhi - varlo) * (zcur - zlo) / (zhi - zlo) + varlo
+
+
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# For users of WRF, a standard WRF read-in function, assuming netCDF files is
+# included below.
+#
+# SPOUT assumes everything on an Arakawa A-grid in height coordinates, so 
+# interpolation to this grid is done here.  The zLevels array specifies the 
+# vertical level interpolation points.
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+def modelData_ReadInFromFile_WRF(filename):
+    zgrid = [   50.0, 107.307, 205.706, 334.344, 496.915, 
+	     701.513, 953.557, 1254.76, 1617.94, 2035.14, 
+	     2504.95, 3027.17, 3605.44, 4247.20, 4941.06, 
+	     5715.49, 6492.84, 7305.57, 8122.98, 8914.02, 
+	     9741.23, 10578.8, 11418.7, 12260.2, 13107.5, 
+	     13977.3, 14843.9, 15830.8, 16832.0, 17951.9, 
+	     19213.7, 20862.0, 22934.2, 24000.0]
+    nz2 = len(zgrid)
+    
+    fileRead = netCDF4.Dataset(filename, 'r')
+
+    nx     = fileRead.variables['west_east'][:]
+    ny     = fileRead.variables['south_north'][:]
+    nz     = fileRead.variables['bottom_top'][:]
+    nxp1   = fileRead.variables['west_east_stag'][:]
+    nyp1   = fileRead.variables['south_north_stag'][:]
+    nzp1   = fileRead.variables['bottom_top_stag'][:]
+    
+    print nx, ny, nz, nyp1, nzp1
+
+    ph     = fileRead.variables['PH'][:]
+    phb    = fileRead.variables['PHB'][:]
+    theta  = fileRead.variables['T'][:]
+    p      = fileRead.variables['P'][:]
+    pb     = fileRead.variables['PB'][:]
+    qvapor = fileRead.variables['QVAPOR'][:]
+    u      = fileRead.variables['U'][:]
+    v      = fileRead.variables['V'][:]
+    w      = fileRead.variables['W'][:]
+    znu    = fileRead.variables['ZNU'][:]
+    znw    = fileRead.variables['ZNW'][:]
+    mu     = fileRead.variables['MU'][:]
+    p_top  = fileRead.variables['P_TOP'][:]
+    
+    p = p + pb
+    ph = ph + phb
+    del pb
+    del phb
+    
+    p0 = 1e+05
+    g  = 9.81e+00
+    cp = 1.0046e+03
+    rd = 2.87e+02
+    kappa = rd / cp
+
+    theta = theta + 300
+    rho = (p0 ** kappa /rd) * p ** (1.0e+00 - kappa) / (theta * \
+	(1.0e+00 + 1.61e+00 * qvapor) )
+    temp = theta * (p / p0) ** kappa
+
+
+    print 'Calculating geopotential heights at regular grid points'
+    phup = np.zeros((nx, ny, nz), float)
+    phdown = np.zeros((nx, ny, nz), float)
+    phit = np.zeros((nx, ny, nz), float)
+
+    phup[:, :, 0] = ph[:, :, 0] - \
+	rd * (3.0e+00 * temp[:, :, 0] - \
+	1.5e+00 * (temp[:, :, 0] + temp[:, :, 1]) + \
+	1.0e+00 * temp[:, :, 1] ) * \
+	math.log( (mu * znu[0] + p_top) / (mu * znw[0] + p_top) )
+    phdown[:, :, 0] = ph[:, :, 1] - \
+	rd * 0.5 * (temp[:, :, 0] + temp[:, :, 1]) * \
+	math.log( (mu * znu[0] + p_top) / (mu * znw[1] + p_top) )
+    phit[:, :, 0] = 0.5 * (phup[:, :, 0] + phdown[:, :, 0])
+    
+    for k in np.arange(1, nz-1, 1):
+        phup[:, :, k] = ph[:, :, k] - \
+		rd * 0.5 * (temp[:, :, k] + temp[:, :, k-1]) * \
+		math.log( (mu * znu[k] + p_top) / (mu * znw[k] + p_top) )
+	phdown[:, :, k] = ph[:, :, k+1] - \
+        	rd * 0.5 * (temp[:, :, k] + temp[:, :, k+1]) * \
+		math.log( (mu * znu[k] + p_top) / (mu * znw[k+1] + p_top) )
+	phit[:, :, k] = 0.5 * (phup[:, :, k] + phdown[:, :, k])
+
+    phup[:, :, nz-1] = ph[:, :, nz-1] - \
+	rd * 0.5 * (temp[:, :, nz-1] + temp[:, :, nz-2]) * \
+	math.log( (mu * znu[nz-1] + p_top) / (mu * znw[nz-1] + p_top) )
+    phdown[:, :, nz-1] = ph[:, :, nzp1-1] - \
+	rd * (3.0e+00 * temp[:, :, nz-1] - \
+	1.5e+00 * (temp[:, :, nz-1] + temp[:, :, nz-2]) + \
+	1.0e+00 * temp[:, :, nz-2] ) * \
+	math.log( (mu * znu[nz-1] + p_top) / (mu * znw[nzp1-1] + p_top) )
+    phit[:, :, nz-1] = 0.5 * (phup[:, :, nz-1] + phdown[:, :, nz-1])
+
+    del phup, phdown
+    
+
+    print "Interpolating velocity components..."
+    u2 = np.zeros((nx, ny, nz), float)
+    v2 = np.zeros((nx, ny, nz), float)
+    w2 = np.zeros((nx, ny, nz), float)
+
+    for i in np.arange(0, nx-1, 1):
+        u2[i, :, :] = 0.5 * (u[i, :, :] + u[i+1, :, :])
+        v2[:, i, :] = 0.5 * (v[:, i, :] + v[:, i+1, :])
+        
+    for i in np.arange(0, nz-1, 1):
+        w2[:, :, i] = 0.5 * (w[:, :, i] + w[:, :, i+1])
+
+
+    print 'Interpolating variables to physical height grid'
+
+    ugd = np.zeros((nx, ny, nz2-2), float)
+    
+
+    for k in np.arange(1, nz2-2, 1):
+        for i in np.arange(0, nx, 1):
+            for j in np.arange(0, ny, 1):
+                dzhi = 9.9e+09
+                dzlo = 9.9e+09
+                zhi  = -9.9e+09
+                zlo  = -9.9e+09
+                for l in np.arange(0, nz, 1):
+                    zlev = phit[i, j, l] / g
+                    if ((zgrid[k] - zlev) >= 0.0 and (zgrid[k] - zlev) < dzlo):
+                        dzlo = zgrid[k] - zlev
+                        zlo = zlev
+                        klo = 1
+                    if ((zlev - zgrid[k]) > 0.0 and (zlev - zgrid[k]) < dzhi):
+                        dzhi = zgrid[k] - zlev
+                        zhi = zlev
+                        khi = 1
+                
+    
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# Read in the model data from plain text (ASCII) files
+#
+# This code will need to be changed to fit with the user's dataset and how
+# that data is set up in their files.
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+def modelData_ReadInFromFile_PlainText(filename):
     f = open(filename, 'r')
 
     ZARRU = [   147.64,    457.24,    786.96,   1138.11,   1512.08,   1910.37,   

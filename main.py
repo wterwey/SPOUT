@@ -1,3 +1,4 @@
+import netCDF4
 import math, os, pickle
 import numpy as np
 import matplotlib.pyplot as plt
@@ -15,14 +16,17 @@ fileList = os.listdir(GV.modelParams['FILEROOT'])
 fileList = sorted(fileList)
 t = -1
 
-outputfile = open('finalUpdrafts.dat', 'w')
+outputfile = open('../finalUpdrafts.dat', 'w')
 
 idNum = 0
 
 for currFile in fileList:
     t = t + 1
-    modelread.modelData_ReadInFromFile(GV.modelParams['FILEROOT']+'/'+currFile)
-
+    print GV.modelParams['FILEROOT']+'/'+currFile
+    modelread.modelData_ReadInFromFile_WRF(GV.modelParams['FILEROOT']+'/'+currFile)
+    
+    continue    
+    
     print 'Establishing current time updrafts...'
     
     curr3D = []
