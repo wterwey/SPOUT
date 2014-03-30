@@ -12,20 +12,20 @@ global modelParams, TrackerParams, modelData
 
 updrafts = []
 
-fileList = os.listdir(GV.modelParams['FILEROOT'])
+fileList = os.listdir(GV.modelParams['INPUTROOT'])
 fileList = sorted(fileList)
 t = -1
 
-outputfile = open('../finalUpdrafts.dat', 'w')
+outputfile = open(GV.modelParams['OUTPUTROOT'] + '/finalUpdrafts.dat', 'w')
 
 idNum = 0
 
-for currFile in fileList:
+#for currFile in fileList:
+for number in range(10):
+    currFile = fileList[number]
     t = t + 1
-    print GV.modelParams['FILEROOT']+'/'+currFile
-    modelread.modelData_ReadInFromFile_WRF(GV.modelParams['FILEROOT']+'/'+currFile)
-    
-    continue    
+    print GV.modelParams['INPUTROOT']+'/'+currFile
+    modelread.modelData_ReadInFromFile_WRF(GV.modelParams['INPUTROOT']+'/'+currFile)   
     
     print 'Establishing current time updrafts...'
     

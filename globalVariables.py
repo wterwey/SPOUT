@@ -7,21 +7,10 @@ global modelParams, TrackerParams, modelData
 #----------------------------------------------------------------------
 modelParams = {}
 
-modelParams['f0']  = 2 * 7.292E-5 * math.sin(15.0 * math.pi / 180.0)
-modelParams['NX']  = 251
-modelParams['NY']  = 251
-modelParams['NZ']  = 30
-modelParams['NT']  = 240
-modelParams['DX']  = 2000.0
-modelParams['DY']  = 2000.0
-modelParams['DT']  = 0.1
-modelParams['X0']  = -1.0 * (modelParams['NX'] - 1) * modelParams['DX'] / 2.0
-modelParams['Y0']  = -1.0 * (modelParams['NY'] - 1) * modelParams['DY'] / 2.0
-modelParams['T0']  = 0.0
-
-modelParams['ZARR'] = []
-modelParams['FILEROOT'] = '/home/wterwey/Desktop/SPOUT/WRFFiles/OriginalWRF'
+modelParams['INPUTROOT']  = 'C:\Users\wterwey\Desktop\WRFFiles'
+modelParams['OUTPUTROOT'] = 'C:\Users\wterwey\Desktop\WRFTest'
 modelParams['g'] = 9.8
+
 
 #----------------------------------------------------------------------
 # Establish updraft arrays and parameters.
@@ -124,35 +113,7 @@ updraftData = []
 # etc.) need to be filled appropriately.
 
 #----------------------------------------------------------------------
-# Set up data arrays
+# Set up data array dictionary
 #----------------------------------------------------------------------
-NX = modelParams['NX']
-NY = modelParams['NY']
-NZ = modelParams['NZ']
 
-P      = np.zeros((NX, NY, NZ), float)
-U      = np.zeros((NX, NY, NZ), float)
-V      = np.zeros((NX, NY, NZ), float)
-W      = np.zeros((NX, NY, NZ), float)
-THETA  = np.zeros((NX, NY, NZ), float)
-QV     = np.zeros((NX, NY, NZ), float)
-QL     = np.zeros((NX, NY, NZ), float)
-DIVERG = np.zeros((NX, NY, NZ), float)
-VORT   = np.zeros((NX, NY, NZ), float)
-AVORT  = np.zeros((NX, NY, NZ), float)
-PV     = np.zeros((NX, NY, NZ), float)
-SPEED  = np.zeros((NX, NY, NZ), float)
-VT     = np.zeros((NX, NY, NZ), float)
-VR     = np.zeros((NX, NY, NZ), float)
-TEMPER = np.zeros((NX, NY, NZ), float)
-THETAE = np.zeros((NX, NY, NZ), float)
-TEMPVT = np.zeros((NX, NY, NZ), float)
-RHO    = np.zeros((NX, NY, NZ), float)
-RH     = np.zeros((NX, NY, NZ), float)
-ZARR   = np.zeros(NZ, float)
-
-modelData = {'P' : P, 'U' : U, 'V' : V, 'W' : W, 'THETA' : THETA, 
-             'QV' : QV, 'QL' : QL, 'DIVERG' : DIVERG, 'VORT' : VORT,
-             'AVORT' : AVORT, 'PV' : PV, 'SPEED' : SPEED, 'TEMPER' : TEMPER, 
-             'THETAE' : THETAE, 'TEMPVT' : TEMPVT, 'RHO' : RHO, 'RH' : RH,
-             'ZARR' : ZARR}
+modelData = {}

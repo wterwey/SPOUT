@@ -20,6 +20,7 @@ def interp2hgt(zlo, zhi, varlo, varhi, zcur):
 # vertical level interpolation points.
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 def modelData_ReadInFromFile_WRF(filename):
+    
     zgrid = [   50.0, 107.307, 205.706, 334.344, 496.915, 
 	     701.513, 953.557, 1254.76, 1617.94, 2035.14, 
 	     2504.95, 3027.17, 3605.44, 4247.20, 4941.06, 
@@ -31,33 +32,44 @@ def modelData_ReadInFromFile_WRF(filename):
     
     fileRead = netCDF4.Dataset(filename, 'r')
 
-    nx     = fileRead.variables['west_east'][:]
-    ny     = fileRead.variables['south_north'][:]
-    nz     = fileRead.variables['bottom_top'][:]
-    nxp1   = fileRead.variables['west_east_stag'][:]
-    nyp1   = fileRead.variables['south_north_stag'][:]
-    nzp1   = fileRead.variables['bottom_top_stag'][:]
-    
-    print nx, ny, nz, nyp1, nzp1
+#    nx     = fileRead.dimensions['west_east'][:]
+#    ny     = fileRead.dimensions['south_north'][:]
+#    nz     = fileRead.dimensions['bottom_top'][:]
+#    nxp1   = fileRead.dimensions['west_east_stag'][:]
+#    nyp1   = fileRead.dimensions['south_north_stag'][:]
+#    nzp1   = fileRead.dimensions['bottom_top_stag'][:]
+    dx     = 1.0 / fileRead.variables['RDX'][:][0]
+    dy     = 1.0 / fileRead.variables['RDY'][:][0]
 
     ph     = fileRead.variables['PH'][:]
-    phb    = fileRead.variables['PHB'][:]
-    theta  = fileRead.variables['T'][:]
-    p      = fileRead.variables['P'][:]
-    pb     = fileRead.variables['PB'][:]
-    qvapor = fileRead.variables['QVAPOR'][:]
-    u      = fileRead.variables['U'][:]
-    v      = fileRead.variables['V'][:]
-    w      = fileRead.variables['W'][:]
-    znu    = fileRead.variables['ZNU'][:]
-    znw    = fileRead.variables['ZNW'][:]
-    mu     = fileRead.variables['MU'][:]
-    p_top  = fileRead.variables['P_TOP'][:]
+    f0     = fileRead.variables['F'][:]
+
+    nz = ph.shape[1]
+    nx = ph.shape[2]
+    ny = ph.shape[3]
+    nzp1 = nz + 1
+    
+    ph     = fileRead.variables['PH'][:].transpose((2, 3, 1, 0))[:, :, :, 0]
+    phb    = fileRead.variables['PHB'][:].transpose((2, 3, 1, 0))[:, :, :, 0]
+    theta  = fileRead.variables['T'][:].transpose((2, 3, 1, 0))[:, :, :, 0]
+    p      = fileRead.variables['P'][:].transpose((2, 3, 1, 0))[:, :, :, 0]
+    pb     = fileRead.variables['PB'][:].transpose((2, 3, 1, 0))[:, :, :, 0]
+    qvapor = fileRead.variables['QVAPOR'][:].transpose((2, 3, 1, 0))[:, :, :, 0]
+    u      = fileRead.variables['U'][:].transpose((2, 3, 1, 0))[:, :, :, 0]
+    v      = fileRead.variables['V'][:].transpose((2, 3, 1, 0))[:, :, :, 0]
+    w      = fileRead.variables['W'][:].transpose((2, 3, 1, 0))[:, :, :, 0]
+    znu    = fileRead.variables['ZNU'][:][0,:]
+    znw    = fileRead.variables['ZNW'][:][0,:]
+    mu     = fileRead.variables['MU'][:][0,:,:]
+    mub    = fileRead.variables['MUB'][:][0,:,:]
+    p_top  = fileRead.variables['P_TOP'][:][0]
     
     p = p + pb
     ph = ph + phb
+    mu = mu + mub
     del pb
     del phb
+    del mub
     
     p0 = 1e+05
     g  = 9.81e+00
@@ -68,7 +80,7 @@ def modelData_ReadInFromFile_WRF(filename):
     theta = theta + 300
     rho = (p0 ** kappa /rd) * p ** (1.0e+00 - kappa) / (theta * \
 	(1.0e+00 + 1.61e+00 * qvapor) )
-    temp = theta * (p / p0) ** kappa
+    temp = theta * np.power((p / p0), kappa)
 
 
     print 'Calculating geopotential heights at regular grid points'
@@ -76,34 +88,36 @@ def modelData_ReadInFromFile_WRF(filename):
     phdown = np.zeros((nx, ny, nz), float)
     phit = np.zeros((nx, ny, nz), float)
 
-    phup[:, :, 0] = ph[:, :, 0] - \
-	rd * (3.0e+00 * temp[:, :, 0] - \
-	1.5e+00 * (temp[:, :, 0] + temp[:, :, 1]) + \
-	1.0e+00 * temp[:, :, 1] ) * \
-	math.log( (mu * znu[0] + p_top) / (mu * znw[0] + p_top) )
-    phdown[:, :, 0] = ph[:, :, 1] - \
-	rd * 0.5 * (temp[:, :, 0] + temp[:, :, 1]) * \
-	math.log( (mu * znu[0] + p_top) / (mu * znw[1] + p_top) )
-    phit[:, :, 0] = 0.5 * (phup[:, :, 0] + phdown[:, :, 0])
+    for i in range(nx):
+        for j in range(ny):
+            phup[i, j, 0] = ph[i, j, 0] - \
+   	       rd * (3.0e+00 * temp[i, j, 0] - \
+   	       1.5e+00 * (temp[i, j, 0] + temp[i, j, 1]) + \
+	       1.0e+00 * temp[i, j, 1] ) * \
+	       math.log( (mu[i, j] * znu[0] + p_top) / (mu[i, j] * znw[0] + p_top) )
+            phdown[i, j, 0] = ph[i, j, 1] - \
+	       rd * 0.5 * (temp[i, j, 0] + temp[i, j, 1]) * \
+	       math.log( (mu[i, j] * znu[0] + p_top) / (mu[i, j] * znw[1] + p_top) )
+            phit[i, j, 0] = 0.5 * (phup[i, j, 0] + phdown[i, j, 0])
     
-    for k in np.arange(1, nz-1, 1):
-        phup[:, :, k] = ph[:, :, k] - \
-		rd * 0.5 * (temp[:, :, k] + temp[:, :, k-1]) * \
-		math.log( (mu * znu[k] + p_top) / (mu * znw[k] + p_top) )
-	phdown[:, :, k] = ph[:, :, k+1] - \
-        	rd * 0.5 * (temp[:, :, k] + temp[:, :, k+1]) * \
-		math.log( (mu * znu[k] + p_top) / (mu * znw[k+1] + p_top) )
-	phit[:, :, k] = 0.5 * (phup[:, :, k] + phdown[:, :, k])
+            for k in np.arange(1, nz-3, 1):
+                phup[i, j, k] = ph[i, j, k] - \
+	           rd * 0.5 * (temp[i, j, k] + temp[i, j, k-1]) * \
+		   math.log( (mu[i, j] * znu[k] + p_top) / (mu[i, j] * znw[k] + p_top) )
+	        phdown[i, j, k] = ph[i, j, k+1] - \
+        	   rd * 0.5 * (temp[i, j, k] + temp[i, j, k+1]) * \
+		   math.log( (mu[i, j] * znu[k] + p_top) / (mu[i, j] * znw[k+1] + p_top) )
+	        phit[i, j, k] = 0.5 * (phup[i, j, k] + phdown[i, j, k])
 
-    phup[:, :, nz-1] = ph[:, :, nz-1] - \
-	rd * 0.5 * (temp[:, :, nz-1] + temp[:, :, nz-2]) * \
-	math.log( (mu * znu[nz-1] + p_top) / (mu * znw[nz-1] + p_top) )
-    phdown[:, :, nz-1] = ph[:, :, nzp1-1] - \
-	rd * (3.0e+00 * temp[:, :, nz-1] - \
-	1.5e+00 * (temp[:, :, nz-1] + temp[:, :, nz-2]) + \
-	1.0e+00 * temp[:, :, nz-2] ) * \
-	math.log( (mu * znu[nz-1] + p_top) / (mu * znw[nzp1-1] + p_top) )
-    phit[:, :, nz-1] = 0.5 * (phup[:, :, nz-1] + phdown[:, :, nz-1])
+            phup[i, j, nz-2] = ph[i, j, nz-2] - \
+	       rd * 0.5 * (temp[i, j, nz-2] + temp[i, j, nz-2]) * \
+	       math.log( (mu[i, j] * znu[nz-2] + p_top) / (mu[i, j] * znw[nz-2] + p_top) )
+            phdown[i, j, nz-2] = ph[i, j, nzp1-2] - \
+	       rd * (3.0e+00 * temp[i, j, nz-2] - \
+	       1.5e+00 * (temp[i, j, nz-2] + temp[i, j, nz-2]) + \
+	       1.0e+00 * temp[i, j, nz-2] ) * \
+	       math.log( (mu[i, j] * znu[nz-2] + p_top) / (mu[i, j] * znw[nzp1-2] + p_top) )
+            phit[i, j, nz-2] = 0.5 * (phup[i, j, nz-2] + phdown[i, j, nz-2])
 
     del phup, phdown
     
@@ -114,18 +128,29 @@ def modelData_ReadInFromFile_WRF(filename):
     w2 = np.zeros((nx, ny, nz), float)
 
     for i in np.arange(0, nx-1, 1):
-        u2[i, :, :] = 0.5 * (u[i, :, :] + u[i+1, :, :])
-        v2[:, i, :] = 0.5 * (v[:, i, :] + v[:, i+1, :])
+        for j in np.arange(0, ny, 1):
+            for k in np.arange(0, nz-1, 1):
+                u2[i, j, k] = 0.5 * (u[i, j, k] + u[i+1, j, k])
+                v2[j, i, k] = 0.5 * (v[j, i, k] + v[j, i+1, k])
         
     for i in np.arange(0, nz-1, 1):
-        w2[:, :, i] = 0.5 * (w[:, :, i] + w[:, :, i+1])
+        for j in np.arange(0, nx, 1):
+            for k in np.arange(0, ny, 1):
+                w2[j, k, i] = 0.5 * (w[j, k, i] + w[j, k, i+1])
 
 
     print 'Interpolating variables to physical height grid'
 
-    ugd = np.zeros((nx, ny, nz2-2), float)
-    
+    pgd   = np.zeros((nx, ny, nz2-2), float)
+    ugd   = np.zeros((nx, ny, nz2-2), float)
+    vgd   = np.zeros((nx, ny, nz2-2), float)
+    wgd   = np.zeros((nx, ny, nz2-2), float)
+    thgd  = np.zeros((nx, ny, nz2-2), float)
+    rhogd = np.zeros((nx, ny, nz2-2), float)
+    qvgd  = np.zeros((nx, ny, nz2-2), float)
 
+    klo = 0
+    khi = 0
     for k in np.arange(1, nz2-2, 1):
         for i in np.arange(0, nx, 1):
             for j in np.arange(0, ny, 1):
@@ -143,8 +168,39 @@ def modelData_ReadInFromFile_WRF(filename):
                         dzhi = zgrid[k] - zlev
                         zhi = zlev
                         khi = 1
+                pgd[i, j, k-1]   = interp2hgt(zlo, zhi, p[i, j, klo], p[i, j, khi], zgrid[k])
+                ugd[i, j, k-1]   = interp2hgt(zlo, zhi, u2[i, j, klo], u2[i, j, khi], zgrid[k])
+                vgd[i, j, k-1]   = interp2hgt(zlo, zhi, v2[i, j, klo], v2[i, j, khi], zgrid[k])
+                wgd[i, j, k-1]   = interp2hgt(zlo, zhi, w2[i, j, klo], w2[i, j, khi], zgrid[k])
+                thgd[i, j, k-1]  = interp2hgt(zlo, zhi, theta[i, j, klo], theta[i, j, khi], zgrid[k])
+                rhogd[i, j, k-1] = interp2hgt(zlo, zhi, rho[i, j, klo], rho[i, j, khi], zgrid[k])
+                qvgd[i, j, k-1]  = interp2hgt(zlo, zhi, qvapor[i, j, klo], qvapor[i, j, khi], zgrid[k])
                 
+
     
+    GV.modelParams['NX'] = nx
+    GV.modelParams['NY'] = ny
+    GV.modelParams['NZ'] = nz-2
+                    
+    GV.modelParams['DX']  = dx
+    GV.modelParams['DY']  = dy
+    GV.modelParams['X0']  = -1.0 * (GV.modelParams['NX'] - 1) * GV.modelParams['DX'] / 2.0
+    GV.modelParams['Y0']  = -1.0 * (GV.modelParams['NY'] - 1) * GV.modelParams['DY'] / 2.0
+    GV.modelParams['T0']  = 0.0
+    GV.modelParams['F0']  = f0[0,:,0]
+    
+    GV.modelParams['P'] = pgd
+    GV.modelParams['U'] = ugd
+    GV.modelParams['V'] = vgd
+    GV.modelParams['W'] = wgd
+    GV.modelParams['THETA'] = thgd
+    GV.modelParams['RHO'] = rhogd
+    GV.modelParams['QV'] = qvgd
+
+    GV.modelParams['ZARR'] = zgrid[1:-2]
+
+                
+                
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # Read in the model data from plain text (ASCII) files
 #
@@ -152,6 +208,18 @@ def modelData_ReadInFromFile_WRF(filename):
 # that data is set up in their files.
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 def modelData_ReadInFromFile_PlainText(filename):
+    GV.modelParams['f0']  = 2 * 7.292E-5 * math.sin(15.0 * math.pi / 180.0)
+    GV.modelParams['NX']  = 251
+    GV.modelParams['NY']  = 251
+    GV.modelParams['NZ']  = 30
+    GV.modelParams['NT']  = 240
+    GV.modelParams['DX']  = 2000.0
+    GV.modelParams['DY']  = 2000.0
+    GV.modelParams['DT']  = 0.1
+    GV.modelParams['X0']  = -1.0 * (GV.modelParams['NX'] - 1) * GV.modelParams['DX'] / 2.0
+    GV.modelParams['Y0']  = -1.0 * (GV.modelParams['NY'] - 1) * GV.modelParams['DY'] / 2.0
+    GV.modelParams['T0']  = 0.0
+
     f = open(filename, 'r')
 
     ZARRU = [   147.64,    457.24,    786.96,   1138.11,   1512.08,   1910.37,   
@@ -164,13 +232,35 @@ def modelData_ReadInFromFile_PlainText(filename):
                5849.94,   6530.19,   7254.65,   8026.21,   8847.91,   9723.03,
               10655.02,  11647.60,  12704.70,  13830.50,  15029.49,  16306.41,
               17666.32,  19114.64,  20657.09,  22299.80,  24049.29,  25912.50]
-    GV.ZARR = ZARRU
+    GV.modelParams['ZARR'] = ZARRU
     
     NX = GV.NX
     NY = GV.NY
     NZ = GV.NZ
     DX = GV.modelParams['DX']
     DY = GV.modelParams['DY']
+    
+    GV.modelData['P']      = np.zeros((NX, NY, NZ), float)
+    GV.modelData['U']      = np.zeros((NX, NY, NZ), float)
+    GV.modelData['V']      = np.zeros((NX, NY, NZ), float)
+    GV.modelData['W']      = np.zeros((NX, NY, NZ), float)
+    GV.modelData['THETA']  = np.zeros((NX, NY, NZ), float)
+    GV.modelData['QV']     = np.zeros((NX, NY, NZ), float)
+    GV.modelData['QL']     = np.zeros((NX, NY, NZ), float)
+    GV.modelData['DIVERG'] = np.zeros((NX, NY, NZ), float)
+    GV.modelData['VORT']   = np.zeros((NX, NY, NZ), float)
+    GV.modelData['AVORT']  = np.zeros((NX, NY, NZ), float)
+    GV.modelData['PV']     = np.zeros((NX, NY, NZ), float)
+    GV.modelData['SPEED']  = np.zeros((NX, NY, NZ), float)
+    GV.modelData['VT']     = np.zeros((NX, NY, NZ), float)
+    GV.modelData['VR']     = np.zeros((NX, NY, NZ), float)
+    GV.modelData['TEMPER'] = np.zeros((NX, NY, NZ), float)
+    GV.modelData['THETAE'] = np.zeros((NX, NY, NZ), float)
+    GV.modelData['TEMPVT'] = np.zeros((NX, NY, NZ), float)
+    GV.modelData['RHO']    = np.zeros((NX, NY, NZ), float)
+    GV.modelData['RH']     = np.zeros((NX, NY, NZ), float)
+    GV.modelData['ZARR']   = np.zeros(NZ, float)
+
     
     URAW = np.zeros((NX, NY, NZ), float)
     VRAW = np.zeros((NX, NY, NZ), float)
