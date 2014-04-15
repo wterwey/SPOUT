@@ -6,7 +6,6 @@ global modelParams, TrackerParams, modelData
 # Set up common arrays and constants.
 #----------------------------------------------------------------------
 modelParams = {}
-
 modelParams['INPUTROOT']  = 'C:\Users\wterwey\Desktop\WRFFiles'
 modelParams['OUTPUTROOT'] = 'C:\Users\wterwey\Desktop\WRFTest'
 modelParams['g'] = 9.8
@@ -93,27 +92,20 @@ TrackerParams['POINTTHRES']      = 6
 TrackerParams['OUTPUTTIMETHRES'] = 3
 TrackerParams['velCorrect']        = 1.0
 
-tempar = np.array(range(TrackerParams['NUMLEVELS']))
-tempar = tempar + TrackerParams['MINUPLEVEL']
+tempar = np.zeros(TrackerParams['NUMLEVELS']) + TrackerParams['MINUPLEVEL']
 TrackerParams['checkLevels'] = tempar
 
-tempar = np.array(range(TrackerParams['NUMLEVELS']), float)
-tempar = 1.5
+tempar = np.zeros(TrackerParams['NUMLEVELS'], float) + 1.5
 TrackerParams['checkValues'] = tempar
 
 updraftData = []
 
 
 #######################################################################
-# File read-in...
-# 
-# This portion of code will need to be changed if one is using a
-# different model result.  This portion of code can be expanded to
-# include any and all read-in, but the important data arrays (U, V, W,
-# etc.) need to be filled appropriately.
-
 #----------------------------------------------------------------------
 # Set up data array dictionary
+#
+# This dictionary will be populated by the modelReadIn modules.
 #----------------------------------------------------------------------
 
 modelData = {}

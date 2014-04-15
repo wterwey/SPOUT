@@ -37,8 +37,8 @@ for number in range(10):
     # 3D updrafts.
     #-----------------------------------------------------
 
-    for m in reversed(GV.TrackerParams['checkLevels']):
-        testArray = GV.W[:, :, m]
+    for m in GV.TrackerParams['checkLevels'][::-1]:
+        testArray = GV.modelData['W'][:, :, m]
         mVal = m - GV.TrackerParams['MINUPHEIGHT'] + 1
         checkVal = GV.TrackerParams['checkValues'][mVal]
         wTh = GV.TrackerParams['WTHRES']

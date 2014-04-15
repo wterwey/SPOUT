@@ -49,15 +49,15 @@ def modelData_ReadInFromFile_WRF(filename):
     ny = ph.shape[3]
     nzp1 = nz + 1
     
-    ph     = fileRead.variables['PH'][:].transpose((2, 3, 1, 0))[:, :, :, 0]
-    phb    = fileRead.variables['PHB'][:].transpose((2, 3, 1, 0))[:, :, :, 0]
-    theta  = fileRead.variables['T'][:].transpose((2, 3, 1, 0))[:, :, :, 0]
-    p      = fileRead.variables['P'][:].transpose((2, 3, 1, 0))[:, :, :, 0]
-    pb     = fileRead.variables['PB'][:].transpose((2, 3, 1, 0))[:, :, :, 0]
-    qvapor = fileRead.variables['QVAPOR'][:].transpose((2, 3, 1, 0))[:, :, :, 0]
-    u      = fileRead.variables['U'][:].transpose((2, 3, 1, 0))[:, :, :, 0]
-    v      = fileRead.variables['V'][:].transpose((2, 3, 1, 0))[:, :, :, 0]
-    w      = fileRead.variables['W'][:].transpose((2, 3, 1, 0))[:, :, :, 0]
+    ph     = fileRead.variables['PH'][:].transpose((3, 2, 1, 0))[:, :, :, 0]
+    phb    = fileRead.variables['PHB'][:].transpose((3, 2, 1, 0))[:, :, :, 0]
+    theta  = fileRead.variables['T'][:].transpose((3, 2, 1, 0))[:, :, :, 0]
+    p      = fileRead.variables['P'][:].transpose((3, 2, 1, 0))[:, :, :, 0]
+    pb     = fileRead.variables['PB'][:].transpose((3, 2, 1, 0))[:, :, :, 0]
+    qvapor = fileRead.variables['QVAPOR'][:].transpose((3, 2, 1, 0))[:, :, :, 0]
+    u      = fileRead.variables['U'][:].transpose((3, 2, 1, 0))[:, :, :, 0]
+    v      = fileRead.variables['V'][:].transpose((3, 2, 1, 0))[:, :, :, 0]
+    w      = fileRead.variables['W'][:].transpose((3, 2, 1, 0))[:, :, :, 0]
     znu    = fileRead.variables['ZNU'][:][0,:]
     znw    = fileRead.variables['ZNW'][:][0,:]
     mu     = fileRead.variables['MU'][:][0,:,:]
@@ -189,13 +189,13 @@ def modelData_ReadInFromFile_WRF(filename):
     GV.modelParams['T0']  = 0.0
     GV.modelParams['F0']  = f0[0,:,0]
     
-    GV.modelParams['P'] = pgd
-    GV.modelParams['U'] = ugd
-    GV.modelParams['V'] = vgd
-    GV.modelParams['W'] = wgd
-    GV.modelParams['THETA'] = thgd
-    GV.modelParams['RHO'] = rhogd
-    GV.modelParams['QV'] = qvgd
+    GV.modelData['P'] = pgd
+    GV.modelData['U'] = ugd
+    GV.modelData['V'] = vgd
+    GV.modelData['W'] = wgd
+    GV.modelData['THETA'] = thgd
+    GV.modelData['RHO'] = rhogd
+    GV.modelData['QV'] = qvgd
 
     GV.modelParams['ZARR'] = zgrid[1:-2]
 
